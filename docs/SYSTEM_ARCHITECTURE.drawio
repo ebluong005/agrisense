@@ -1,0 +1,37 @@
+<mxfile host="65bd71144e">
+    <diagram id="KKvWCLg9UQDYbirk0bE9" name="Page-1">
+        <mxGraphModel dx="1408" dy="1092" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="hqnzWfHScWdYOFqGfWTx-2" parent="1" style="shape=ext;double=1;rounded=1;whiteSpace=wrap;html=1;" value="&lt;b&gt;AGRISENSE WEB APP&amp;nbsp;&lt;/b&gt;" vertex="1">
+                    <mxGeometry height="80" width="200" x="190" y="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="hqnzWfHScWdYOFqGfWTx-3" parent="1" style="shape=ext;double=1;rounded=1;whiteSpace=wrap;html=1;" value="&lt;b&gt;Vercel&lt;/b&gt;&lt;div&gt;React + TypeScript&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+                    <mxGeometry height="100" width="240" x="170" y="270" as="geometry"/>
+                </mxCell>
+                <mxCell id="hqnzWfHScWdYOFqGfWTx-4" parent="1" style="shape=ext;double=1;rounded=1;whiteSpace=wrap;html=1;" value="&lt;b&gt;Supabase&lt;/b&gt;&lt;div&gt;&lt;b&gt;PostgreSQL + PostGis&lt;/b&gt;&lt;/div&gt;" vertex="1">
+                    <mxGeometry height="110" width="150" x="120" y="455" as="geometry"/>
+                </mxCell>
+                <mxCell id="hqnzWfHScWdYOFqGfWTx-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="&lt;b&gt;Data Providers&lt;/b&gt;&lt;div&gt;&lt;b&gt;NASA POWER + USDM&lt;/b&gt;&lt;/div&gt;" vertex="1">
+                    <mxGeometry height="110" width="160" x="300" y="456" as="geometry"/>
+                </mxCell>
+                <mxCell id="hqnzWfHScWdYOFqGfWTx-6" parent="1" style="shape=singleArrow;direction=north;whiteSpace=wrap;html=1;" value="" vertex="1">
+                    <mxGeometry height="100" width="60" x="-570" y="350" as="geometry"/>
+                </mxCell>
+                <mxCell id="hqnzWfHScWdYOFqGfWTx-7" parent="1" style="shape=singleArrow;direction=south;whiteSpace=wrap;html=1;" value="" vertex="1">
+                    <mxGeometry height="70" width="40" x="190" y="378" as="geometry"/>
+                </mxCell>
+                <mxCell id="hqnzWfHScWdYOFqGfWTx-8" parent="1" style="shape=singleArrow;direction=south;whiteSpace=wrap;html=1;" value="" vertex="1">
+                    <mxGeometry height="70" width="40" x="350" y="378" as="geometry"/>
+                </mxCell>
+                <mxCell id="hqnzWfHScWdYOFqGfWTx-9" parent="1" style="shape=singleArrow;direction=south;whiteSpace=wrap;html=1;arrowWidth=0.2;arrowSize=0.3;" value="" vertex="1">
+                    <mxGeometry height="40" width="30" x="280" y="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="hqnzWfHScWdYOFqGfWTx-10" parent="1" style="shape=ext;double=1;rounded=1;whiteSpace=wrap;html=1;" value="Github Actions CI/CD&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+                    <mxGeometry height="80" width="220" x="210" y="620" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
