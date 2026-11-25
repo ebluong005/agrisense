@@ -1,0 +1,172 @@
+# Release pipeline for main: CI -> staging (automatic) -> production (requires approval).
+#
+# Production promotion is gated by the GitHub Environment "production", which must have
+# required reviewers. Nothing touches the production database or production services
+# until a reviewer approves this run in the Actions UI.
+#
+# Render services use autoDeployTrigger: off and Vercel has Git deployments disabled,
+# so this workflow is the only path to staging/production and always deploys the exact,
+# tested commit (github.sha).
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false # never interrupt a deploy or migration halfway
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_CLI: vercel@66.6.0
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  staging:
+    name: Staging
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    environment:
+      name: staging
+      url: ${{ steps.web.outputs.url }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version-file: backend/.python-version
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: python -m pip install -r backend/requirements.txt
+      - name: Migrate staging database (expand-only migrations; see docs/CICD_DESIGN.md)
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        run: |
+          python -m alembic upgrade head
+          python -m alembic check
+      - name: Deploy backend to Render (exact commit)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: python3 scripts/render_deploy.py deploy --service "${{ vars.RENDER_SERVICE_ID }}" --commit "${{ github.sha }}"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: frontend/.nvmrc
+      - name: Deploy frontend (Vercel preview deployment pointing at the staging API)
+        id: web
+        working-directory: frontend
+        run: |
+          npx --yes "$VERCEL_CLI" pull --yes --environment=preview --token="${{ secrets.VERCEL_TOKEN }}"
+          npx --yes "$VERCEL_CLI" build --token="${{ secrets.VERCEL_TOKEN }}"
+          url="$(npx --yes "$VERCEL_CLI" deploy --prebuilt --token="${{ secrets.VERCEL_TOKEN }}")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Smoke test (includes authenticated create/read/delete with the smoke account)
+        env:
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: python3 scripts/smoke_test.py --api "${{ vars.API_URL }}" --web "${{ steps.web.outputs.url }}" --write-checks
+
+  production:
+    name: Production (approval required)
+    needs: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment:
+      name: production # required reviewers + "main only" deployment branch rule
+      url: ${{ vars.WEB_URL }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version-file: backend/.python-version
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: python -m pip install -r backend/requirements.txt
+
+      - name: Report production migration state
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        run: |
+          current="$(python -m alembic current 2>/dev/null | awk '{print $1}' | tail -1)"
+          head="$(python -m alembic heads | awk '{print $1}')"
+          {
+            echo "### Production database"
+            echo "- current revision: \`${current:-none}\`"
+            echo "- target revision: \`$head\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Pending migrations:"; python -m alembic history -r "${current:-base}:head"
+
+      - name: Apply production migrations (approved via the production environment)
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        run: |
+          python -m alembic upgrade head
+          python -m alembic check
+
+      - name: Deploy backend to Render (exact commit)
+        id: api
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: python3 scripts/render_deploy.py deploy --service "${{ vars.RENDER_SERVICE_ID }}" --commit "${{ github.sha }}"
+
+      - name: Smoke test backend (read-only)
+        id: api_smoke
+        run: python3 scripts/smoke_test.py --api "${{ vars.API_URL }}"
+
+      # A failed Render build/deploy never replaces the live version, so only a deploy that went
+      # live but fails its smoke test needs an automatic rollback.
+      - name: Roll back backend if its smoke test failed
+        if: failure() && steps.api_smoke.outcome == 'failure' && steps.api.outputs.previous_deploy_id != ''
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: python3 scripts/render_deploy.py rollback --service "${{ vars.RENDER_SERVICE_ID }}" --deploy "${{ steps.api.outputs.previous_deploy_id }}"
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: frontend/.nvmrc
+      - name: Deploy frontend to Vercel production
+        id: web
+        working-directory: frontend
+        run: |
+          npx --yes "$VERCEL_CLI" pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+          npx --yes "$VERCEL_CLI" build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+          url="$(npx --yes "$VERCEL_CLI" deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test production (read-only, real domain)
+        id: web_smoke
+        run: python3 scripts/smoke_test.py --api "${{ vars.API_URL }}" --web "${{ vars.WEB_URL }}"
+
+      # `deploy --prod` is already live when its smoke test runs: restore the previous production deployment.
+      - name: Roll back frontend if its smoke test failed
+        if: failure() && steps.web_smoke.outcome == 'failure'
+        working-directory: frontend
+        run: npx --yes "$VERCEL_CLI" rollback --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Release summary
+        if: always()
+        run: |
+          {
+            echo "### Release ${{ github.sha }}"
+            echo "- backend deploy: \`${{ steps.api.outputs.deploy_id }}\` (previous: \`${{ steps.api.outputs.previous_deploy_id }}\`)"
+            echo "- frontend deployment: ${{ steps.web.outputs.url }}"
+            echo "- rollback: run the **Rollback** workflow (see docs/CICD_DESIGN.md)"
+          } >> "$GITHUB_STEP_SUMMARY"

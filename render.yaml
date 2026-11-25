@@ -1,0 +1,57 @@
+# Render Blueprint: native Python web services (no Docker). https://render.com/docs/blueprint-spec
+#
+# Deploys are triggered ONLY by .github/workflows/deploy.yml through the Render API with the
+# exact tested commit (autoDeployTrigger: off). Database migrations are NOT run here
+# (preDeployCommand is paid-only and would bypass the production approval gate);
+# the deploy workflow runs them before deploying.
+#
+# Values marked `sync: false` are entered in the Render dashboard on first Blueprint creation.
+# Python version: backend/.python-version (3.12). Confirm "3.12" in the first build log.
+services:
+  - type: web
+    name: agrisense-api-staging
+    runtime: python
+    plan: free # sleeps when idle (~1 min cold start); fine for staging
+    region: oregon # closest to the Supabase project (AWS us-west-2)
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: DATABASE_URL # Supabase *staging* project, session pooler URI (IPv4), ?sslmode=require
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS # e.g. https://agrisense-staging.vercel.app
+        sync: false
+      - key: CORS_ORIGIN_REGEX # Vercel preview URLs, e.g. ^https://agrisense-[a-z0-9-]+-yourteam\.vercel\.app$
+        sync: false
+      - key: DB_POOL_SIZE
+        value: "3"
+
+  - type: web
+    name: agrisense-api
+    runtime: python
+    # Free instances sleep when idle, so a farmer's first request can take ~1 minute.
+    # Before inviting pilot users, switch to Render's smallest paid instance (see docs/CICD_DESIGN.md).
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL # Supabase *production* project, session pooler URI, ?sslmode=require
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS # the production domain(s) only; no preview regex in production
+        sync: false
+      - key: DB_POOL_SIZE
+        value: "5"
