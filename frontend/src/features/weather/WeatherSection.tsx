@@ -2,7 +2,9 @@ import { CircleCheck, CloudRain, Info, Thermometer, TriangleAlert } from 'lucide
 import { lazy, Suspense, type ReactNode } from 'react'
 import { weatherApi } from '../../api/endpoints'
 import type { RainfallWindow, WeatherAlert, WeatherSummary } from '../../api/types'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ErrorBoundary } from '../../components/ui/ErrorBoundary'
 import { Notice } from '../../components/ui/Notice'
 import { ErrorState, LoadingState } from '../../components/ui/States'
 import { useApi } from '../../hooks/useApi'
@@ -55,9 +57,22 @@ export function WeatherSection({ target }: { target: WeatherTarget }) {
                   ]}
                 />
               </div>
-              <Suspense fallback={<LoadingState label="Loading charts…" />}>
-                <WeatherCharts daily={s.daily} />
-              </Suspense>
+              {/* If the chart code can't load, keep the totals and warnings usable. */}
+              <ErrorBoundary
+                fallback={() => (
+                  <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl bg-stone-50 p-4 text-base text-stone-700">
+                    The charts couldn&apos;t be loaded. The numbers above are still correct.
+                    {/* A failed lazy import stays cached by React, so only a reload retries it. */}
+                    <Button variant="secondary" onClick={() => window.location.reload()}>
+                      Reload page
+                    </Button>
+                  </div>
+                )}
+              >
+                <Suspense fallback={<LoadingState label="Loading charts…" />}>
+                  <WeatherCharts daily={s.daily} />
+                </Suspense>
+              </ErrorBoundary>
             </>
           ) : (
             <p className="text-base text-stone-700">

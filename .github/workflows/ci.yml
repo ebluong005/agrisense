@@ -59,6 +59,8 @@ jobs:
           sudo apt-get install -y -qq postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y -qq postgresql-17 postgresql-17-postgis-3
+          # The runner image disables automatic cluster creation, so create it explicitly.
+          pg_lsclusters -h | awk '$1 == "17" && $2 == "main"' | grep -q . || sudo pg_createcluster 17 main
           sudo pg_ctlcluster 17 main start
           # The runner image may already own port 5432 with another version: use cluster 17's port.
           echo "PGPORT_17=$(pg_lsclusters -h | awk '$1 == "17" {print $3}')" >> "$GITHUB_ENV"

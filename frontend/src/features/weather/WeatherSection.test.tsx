@@ -5,7 +5,13 @@ import { mockApi } from '../../test/fetchMock'
 import { weatherSummary } from '../../test/weatherFixture'
 import { WeatherSection } from './WeatherSection'
 
-vi.mock('./WeatherCharts', () => ({ default: () => <p>charts</p> }))
+const charts = vi.hoisted(() => ({ fail: false }))
+vi.mock('./WeatherCharts', () => ({
+  default: () => {
+    if (charts.fail) throw new TypeError('Failed to fetch dynamically imported module: /assets/WeatherCharts.js')
+    return <p>charts</p>
+  },
+}))
 
 const lowRain = {
   code: 'LOW_RAINFALL_7D',
@@ -84,5 +90,19 @@ describe('WeatherSection', () => {
     down = false
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByText('Rain, last 7 days')).toBeInTheDocument()
+  })
+
+  it('keeps totals and warnings usable when the chart code fails to load', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    charts.fail = true
+    try {
+      mockApi({ 'GET /farms/7/weather/summary': () => ({ json: weatherSummary() }) })
+      render(<WeatherSection target={{ kind: 'farm', id: 7 }} />)
+      expect(await screen.findByText("The charts couldn't be loaded. The numbers above are still correct.")).toBeInTheDocument()
+      expect(screen.getByText('Rain, last 7 days')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Reload page' })).toBeInTheDocument()
+    } finally {
+      charts.fail = false
+    }
   })
 })

@@ -31,3 +31,8 @@ All decisions are **proposed** as of 2026-11-24; verify against the actual check
 - **Decision:** GitHub Actions for Python and frontend checks; required branch protection; preview/staging smoke and controlled production release.
 - **Reason:** Prevent regressions during the compressed delivery schedule.
 - **Consequence:** CI scripts and lockfiles must be created; staging DB must be isolated.
+
+## ADR-006: Automated quality gates
+- **Decision:** 
+- **Reason:** 
+- **Consequence:** 

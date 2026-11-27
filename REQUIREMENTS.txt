@@ -1,0 +1,338 @@
+AGRISENSE — PRODUCT & ENGINEERING REQUIREMENTS
+Version: 2.0
+Updated: 2026-11-24
+Status: Working product specification
+Suggested repository path: /REQUIREMENTS.txt
+
+======================================================================
+1. PRODUCT VISION
+======================================================================
+Mission: Make useful crop and drought monitoring accessible to small and
+resource-constrained farmers without requiring expensive on-farm hardware,
+paid satellite imagery, or specialist data-analysis skills.
+
+Positioning: AgriSense is an affordable, mobile-friendly field-monitoring
+and early-warning tool. It combines publicly accessible weather and
+satellite observations into clear, explainable signals that help farmers
+prioritize which fields to inspect.
+
+Product promise: A farmer can register a field, understand available
+weather and vegetation trends, and see possible issues in plain language.
+AgriSense DOES NOT claim to measure on-farm soil moisture directly,
+diagnose crop diseases, guarantee yields, or determine exact irrigation
+amounts without validated local measurements and agronomic models.
+
+Initial market: Small and resource-constrained farms in the United
+States, with an initial pilot focused on one geographic area and a limited
+set of crops. Expansion to other countries requires separate evaluation
+of language, connectivity, data coverage, and agronomic suitability.
+
+Business hypothesis (not yet validated): Farmers may adopt a free basic
+service, while some will pay for advanced history/alerts; cooperatives,
+nonprofits, or extension organizations may fund access for farmers.
+
+======================================================================
+2. USERS AND CORE PROBLEMS
+======================================================================
+Primary user: Farmer or farm operator with limited time, budget, and
+technical expertise, often using a smartphone rather than a desktop.
+
+Secondary users (future): Agricultural cooperatives, extension agents,
+nonprofits, and farm advisers assisting multiple growers.
+
+Problems to solve:
+- Existing crop-monitoring workflows may rely on field visits, scattered
+  weather apps, and spreadsheets.
+- Some precision-agriculture solutions require costly hardware, ongoing
+  subscriptions, or specialized expertise.
+- Vegetation indices and drought data can be difficult to interpret.
+- Limited connectivity and small/irregular fields can restrict the value
+  of some geospatial products.
+
+Core jobs-to-be-done:
+- "Help me check which field needs attention today."
+- "Show me whether recent rainfall is unusually low."
+- "Explain whether vegetation has changed, and how reliable that is."
+- "Let me use this without buying sensors or learning satellite science."
+
+======================================================================
+3. PRODUCT PRINCIPLES
+======================================================================
+P1. Affordable by design: no dedicated sensor or drone required for core
+    functionality; control cloud processing and bandwidth costs.
+P2. Simple by default: actionable plain-language summaries before charts.
+P3. Mobile-first: readable on a phone; usable outdoors and on slow links.
+P4. Evidence-based: show source, observation date, units, and uncertainty.
+P5. Transparent limitations: distinguish precipitation estimates, regional
+    drought classifications, vegetation signals, and actual soil conditions.
+P6. Privacy: farmer controls access to their farms and field locations.
+P7. Progressive complexity: advanced maps and history remain optional.
+
+======================================================================
+4. RELEASE SCOPE AND PRIORITIES
+======================================================================
+P0 = Required for first publicly testable MVP.
+P1 = Next iteration after real user feedback.
+P2 = Future experiments; not needed for initial launch.
+
+P0 — REQUIRED
+R-001 Accounts and secure farm ownership
+  - Sign up, log in, log out; hash passwords securely.
+  - Every protected farm/field endpoint enforces owner authorization.
+  - Users can export or delete their own farm records.
+
+R-002 Simple farm and field onboarding
+  - Create/edit/delete a farm with a name and representative location.
+  - Add one or more fields by map polygon; provide a simpler point-based
+    fallback if drawing is too difficult on a phone.
+  - Persist field geometry using PostgreSQL/PostGIS or validated GeoJSON
+    with a documented migration path to PostGIS.
+  - Show hectares/acres and clarify that area is an estimate.
+  - Provide guidance when a field is too small or irregular for reliable
+    satellite interpretation.
+
+R-003 Historical weather monitoring
+  - Fetch actual historical precipitation and temperature from NASA POWER
+    or another documented provider with appropriate usage terms.
+  - Show 7-day and 30-day rainfall totals and historical temperature trend.
+  - Show weather-data spatial granularity and source date; NEVER present
+    gridded weather data as a physical sensor reading from the field.
+  - Indicate missing observations and temporary provider failures.
+
+R-004 Field vegetation monitoring
+  - Show latest valid Sentinel-2 NDVI observation and historical trend
+    where coverage, cloud conditions, field size, and provider access permit.
+  - Apply cloud/cloud-shadow masking and expose the valid-pixel percentage
+    or comparable quality indicator.
+  - Display observation date and a clear "no usable image" state.
+  - Compare observations with relevant recent/historical context; do not
+    automatically infer crop disease or drought cause from NDVI alone.
+  - If Copernicus credentials/quotas are unavailable, the interface must
+    transparently show vegetation monitoring as unavailable, not fake data.
+
+R-005 Plain-language dashboard
+  - Mobile-responsive home screen lists farms/fields and last update time.
+  - Give a simple status for each field: No clear issue / Check field /
+    Insufficient data, backed by transparent rules.
+  - Provide an explanation linking status to observations and thresholds.
+  - Offer charts and a map as secondary detail, not the only interface.
+  - Include loading, empty, stale-data, and provider-error states.
+
+R-006 Explainable early warnings
+  - Rule-based flags for sustained low rainfall and significant NDVI
+    decline, when there are sufficient valid observations.
+  - Each warning records field, rule, data source, observation dates,
+    and a suggested low-risk follow-up (e.g., inspect the field).
+  - Never prescribe exact irrigation amounts or give definitive disease
+    diagnoses from these signals.
+  - Prevent duplicate alerts for the same trigger/time period.
+
+R-007 Accessibility and constrained-connectivity design
+  - Core flows work on a small mobile viewport and with keyboard input.
+  - Basic field summary is visible without loading heavyweight map tiles.
+  - Compress assets, cache appropriate read-only data, and avoid mandatory
+    continuous satellite imagery downloads.
+  - Make source dates visible even when cached data is displayed.
+
+R-008 Reliability and transparency
+  - Document all third-party data dependencies and their terms.
+  - Validate latitude/longitude, dates, polygons, and request payloads.
+  - Add provider timeouts, safe retries, cache TTLs, and structured logs.
+  - Never silently substitute mock observations into production responses.
+
+P1 — NEXT ITERATION
+R-101 U.S. Drought Monitor regional D0–D4 classifications with weekly
+      publication date and boundary/scale limitations clearly shown.
+R-102 Optional email/SMS notifications with opt-in and frequency controls.
+R-103 Crop type and planting-date context for interpreting seasonal NDVI.
+R-104 Low-bandwidth mode, improved offline-friendly cached summaries, and
+      multilingual onboarding based on pilot needs.
+R-105 Field notes and scouting photos recorded by farmers.
+R-106 CSV data export and printable concise field report.
+R-107 Basic cohort onboarding and usage analytics without excessive
+      collection of precise-location or personal data.
+
+P2 — FUTURE / NOT IN MVP
+R-201 Validated crop-specific agronomic models and irrigation advice.
+R-202 Sensor integrations where farmers already own compatible equipment.
+R-203 Multi-farm dashboards for cooperatives/extension organizations.
+R-204 Yield prediction, disease diagnosis, and machine learning only after
+      collecting suitable ground-truth data and validating model accuracy.
+R-205 International expansion and alternative satellite data sources.
+R-206 Paid subscriptions and organization-sponsored access after demand
+      and operating economics have been established.
+
+======================================================================
+5. KEY USER FLOWS
+======================================================================
+FLOW A — FIRST-TIME SETUP
+1. User creates account and signs in.
+2. User creates a farm by address, coordinates, or map selection.
+3. User draws a field boundary OR starts with a representative point.
+4. System validates and stores the field.
+5. Dashboard displays available weather, NDVI, and freshness/quality info.
+6. If data is missing, a clear reason and fallback are shown.
+
+FLOW B — DAILY FIELD CHECK
+1. User opens AgriSense on a phone.
+2. User sees each field's status and last valid observation.
+3. User selects a flagged field.
+4. System explains the signal, supporting measurements, and limitations.
+5. User decides whether to inspect the field; may record a note in P1.
+
+FLOW C — SERVICE FAILURE
+1. Weather or satellite provider is slow, rate-limited, or unavailable.
+2. App serves recently cached observations when safe and labels them stale.
+3. App shows a non-technical error and never invents fresh measurements.
+4. A retry/backoff policy avoids excessive provider calls.
+
+======================================================================
+6. TECHNICAL REQUIREMENTS AND ARCHITECTURE
+======================================================================
+Frontend: React, TypeScript, Vite, Tailwind CSS, charting library; use
+MapLibre or Leaflet for optional interactive maps.
+Backend: Python, FastAPI, Pydantic, SQLAlchemy, HTTPX, Alembic.
+Database: PostgreSQL with PostGIS for farm/field geometry.
+Architecture: modular monolith; separate routes, schemas, service
+integrations, business rules, and persistence.
+
+Recommended deployment target:
+- Frontend: Vercel static/Vite deployment.
+- Backend: Render, Railway, or other Python-capable host; deploy separately
+  from the frontend, with background tasks/worker if required.
+- Database: managed PostgreSQL with PostGIS enabled (e.g., a supported
+  Supabase configuration or another managed PostgreSQL provider).
+- Local development: Docker Compose for PostgreSQL/PostGIS; frontend and
+  FastAPI may run locally for rapid debugging, or all services via Compose.
+- On Apple Silicon, prefer native linux/arm64 images, not x86 emulation.
+
+API requirements:
+- Versioned /api/v1 endpoints with OpenAPI/Swagger docs.
+- Consistent JSON structures and appropriate HTTP status codes.
+- Pagination for lists as data volume grows.
+- Server-side authorization on every user-owned resource.
+
+Data model (minimum):
+- users: id, auth fields, created_at
+- farms: id, owner_id, name, coordinates, created_at
+- fields: id, farm_id, name, geometry, area, created_at
+- weather_observations: location/time/source, metrics, fetched_at
+- vegetation_observations: field/time/source, NDVI, valid_pixel_fraction
+- alerts: field_id, rule_id, observation window, state, created_at
+Later: crop_seasons, drought_observations, subscriptions, organizations.
+
+Operational requirements:
+- Migration files checked into source control; no destructive migration
+  without an explicit review and data migration plan.
+- Secrets only in environment variables or a secret manager.
+- TLS in production and restricted CORS for production frontend origin.
+- Password hashes, strong session/token management, rate limiting on auth.
+- Database backups, error logging, and health endpoints.
+- Unit tests for rules, API integration tests, and basic frontend tests.
+- Do not log precise farm coordinates unnecessarily.
+
+======================================================================
+7. NONFUNCTIONAL REQUIREMENTS
+======================================================================
+NFR-001 Affordability: Track per-active-farm satellite/API processing,
+        storage, hosting, and notification costs before setting prices.
+NFR-002 Speed target: cached basic dashboard summary should typically
+        load within 3 seconds on a reasonable mobile connection; measure.
+NFR-003 Availability: external API outage must not block access to saved
+        farms or previously cached observations.
+NFR-004 Data integrity: store observation date, fetch time, units, source,
+        and missing-data markers for every derived metric.
+NFR-005 Accessibility: accessible labels, contrast, keyboard navigation,
+        touch-friendly controls, and readable status without color alone.
+NFR-006 Security: owner isolation, safe credentials, and protected exports.
+NFR-007 Privacy: clear farm-location data policy and deletion mechanism.
+NFR-008 Portability: document local setup, deployment steps, and rollback.
+
+======================================================================
+8. ACCEPTANCE CRITERIA — P0 MVP
+======================================================================
+AC-01 A new user can sign up, sign in, and create a farm from a phone.
+AC-02 A user can save a field and see it after refreshing/restarting app.
+AC-03 An unauthorized user cannot view, edit, or delete another user's
+      farms or fields; tests cover this boundary.
+AC-04 The system retrieves real historical temperature and precipitation
+      and displays correct units, period, and data source.
+AC-05 For suitable fields and valid satellite observations, the app shows
+      dated NDVI statistics and a trend; otherwise it clearly explains
+      unavailability or low confidence.
+AC-06 Every "check field" signal provides a readable rule explanation,
+      supporting dates/values, and a non-diagnostic caution.
+AC-07 The main dashboard works on a typical phone-sized viewport without
+      requiring a desktop or advanced map interaction.
+AC-08 Service outages do not wipe saved data or result in invented values.
+AC-09 Local installation instructions work on an ARM64 macOS machine.
+AC-10 Automated tests pass and README documents known limitations.
+AC-11 The frontend is deployable on Vercel, API on a Python host, and data
+      persists in managed PostgreSQL/PostGIS.
+
+======================================================================
+9. SUCCESS METRICS AND VALIDATION PLAN
+======================================================================
+Do not confuse registered accounts with proof of farmer value.
+Initial validation: interview 10–15 farmers in one target segment; run a
+small pilot with 5–10 farms, subject to informed consent.
+
+Primary learning metric:
+- Percentage of pilot users who report a useful field-inspection or farm
+  management decision informed by AgriSense in a given month.
+
+Supporting metrics:
+- Successful farm/field onboarding rate.
+- Time to first useful field summary.
+- Weekly returning pilot users.
+- Percentage of fields with a recent valid satellite observation.
+- Alert accuracy/false-positive feedback from farmer follow-up.
+- Cost per active farm per month and API quota utilization.
+
+Pricing hypothesis to test, NOT a committed price:
+- Free basic tier for one or a limited number of fields.
+- Optional roughly $5–10/month enhanced tier if users demonstrate value.
+- Potential organization-funded access for cooperatives and nonprofits.
+
+======================================================================
+10. DEVELOPMENT ORDER
+======================================================================
+Phase 1: Stabilize existing FastAPI/NASA POWER service; Docker ARM64
+         PostgreSQL/PostGIS; SQLAlchemy models, migrations, auth, farms.
+Phase 2: Mobile-first React onboarding, field management, weather summary.
+Phase 3: Sentinel-2 NDVI integration with quality/freshness indicators.
+Phase 4: Explainable rule-based alerts and resilient caching.
+Phase 5: Security/testing/accessibility review, README, Vercel + API +
+         managed database deployment, small farmer pilot.
+Phase 6: Prioritize P1 features from observed pilot needs, not assumptions.
+
+======================================================================
+11. EXPLICIT NON-GOALS AND RISKS
+======================================================================
+Non-goals for P0:
+- No claims of real-time field soil-moisture measurement.
+- No definitive disease identification based on NDVI.
+- No automated precise irrigation prescriptions.
+- No custom drone hardware, paid sensor requirement, or complicated ML.
+- No unsupported claims of guaranteed crop yields or water savings.
+
+Key risks and mitigations:
+- Small/mixed fields: warn about sparse/mixed pixels and lower confidence.
+- Clouds/revisit gaps: display last valid date; don't imply live status.
+- Regional weather resolution: disclose difference from local sensors.
+- Financial sustainability: measure unit economics before final pricing.
+- Competition from free satellite apps: differentiate through simplicity,
+  resource-constrained workflows, contextual alerts, and farmer testing.
+- Connectivity: keep core dashboard lightweight and cache safely.
+- Data governance: minimize location sharing and protect ownership.
+
+======================================================================
+12. DEFINITION OF DONE
+======================================================================
+A small farmer can sign up, add a field, view dated real weather and
+available vegetation observations, understand clear field-inspection
+signals, and use the service on a phone without buying dedicated hardware.
+The system is tested, documented, respects user data boundaries, handles
+missing environmental data honestly, and can be deployed affordably.
+
+End of requirements.

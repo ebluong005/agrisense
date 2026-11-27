@@ -84,6 +84,16 @@ Secrets are **scoped to GitHub Environments**, so the same name holds a differen
 
    Then copy each service ID (`srv-…`) and create an API key (Account → API Keys). After the first deploy, confirm **Python 3.12** in the build log. The Blueprint docs don't document version selection; the repo provides `backend/.python-version`.
 4. **Vercel.** Create a project from this repo with **Root Directory left blank**: CI runs the CLI inside `frontend/`, which holds `vercel.json`. Set `VITE_API_BASE_URL` for **Preview** (staging API) and **Production** (production API). From `frontend/`, run `npx vercel link` once to get the org and project IDs from `.vercel/project.json`, then create a token. Git deployments are already disabled in `vercel.json`.
+   **Done (2026-11-24):**
+   - Project `agrisense` exists in team `ebluong005s-projects`, created with the CLI with no Git connection.
+   - Settings: Node 22.x, Root Directory blank, Vite, `npm ci`, `npm run build`, output `dist`.
+   - Production address: **`https://agrisense-roan.vercel.app`** (`agrisense.vercel.app` was taken). Use it for `WEB_URL` and the production `CORS_ORIGINS`.
+   - IDs: in `frontend/.vercel/project.json` (git-ignored).
+
+   Lessons learned:
+   - **The first deployment of a new project becomes production**, even without `--prod`.
+   - Deployment Protection "all except custom domains" leaves the **production `*.vercel.app` address public**. Per-deployment and preview URLs still redirect to Vercel sign-in, so previews need `VERCEL_AUTOMATION_BYPASS_SECRET` for smoke tests.
+   - In non-interactive runs, `vercel deploy` prints JSON, not the URL; the workflows parse it with `scripts/vercel_url.py`.
 5. **Cost.** All services above have free tiers: GitHub Actions minutes for private repos are limited, and public repos are free. Render's free instances **sleep when idle**, so the first request takes about a minute. Fine for staging; for production, move to Render's smallest paid instance before inviting farmers (`plan:` in `render.yaml`).
 
 ## 5. Release procedure

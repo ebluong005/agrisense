@@ -47,7 +47,7 @@ jobs:
         run: |
           npx --yes "$VERCEL_CLI" pull --yes --environment=preview --token="${{ secrets.VERCEL_TOKEN }}"
           npx --yes "$VERCEL_CLI" build --token="${{ secrets.VERCEL_TOKEN }}"
-          url="$(npx --yes "$VERCEL_CLI" deploy --prebuilt --token="${{ secrets.VERCEL_TOKEN }}")"
+          url="$(npx --yes "$VERCEL_CLI" deploy --prebuilt --token="${{ secrets.VERCEL_TOKEN }}" | python3 ../scripts/vercel_url.py)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: Smoke test (read-only)
         working-directory: .

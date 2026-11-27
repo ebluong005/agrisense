@@ -3,6 +3,7 @@ import { createBrowserRouter, Link, RouterProvider } from 'react-router'
 import { AuthProvider } from './auth/AuthContext'
 import { PublicOnly, RequireAuth } from './auth/RouteGuards'
 import { AppShell } from './components/layout/AppShell'
+import { RouteError } from './components/layout/RouteError'
 import { AccountPage } from './features/account/AccountPage'
 import { LoginPage } from './features/auth/LoginPage'
 import { RegisterPage } from './features/auth/RegisterPage'
@@ -29,6 +30,7 @@ function NotFound() {
 const routes = [
   {
     element: <PublicOnly />,
+    errorElement: <RouteError />,
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
@@ -36,6 +38,7 @@ const routes = [
   },
   {
     element: <RequireAuth />,
+    errorElement: <RouteError />,
     children: [
       {
         element: <AppShell />,
